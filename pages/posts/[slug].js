@@ -1,15 +1,22 @@
-import fs from 'fs'
-import matter from 'gray-matter'
-import { MDXRemote } from 'next-mdx-remote'
-import { serialize } from 'next-mdx-remote/serialize'
-import dynamic from 'next/dynamic'
-import Head from 'next/head'
-import Link from 'next/link'
-import path from 'path'
-import CustomLink from '../../components/CustomLink'
-import Layout from '../../components/Layout'
-import { postFilePaths, POSTS_PATH } from '../../utils/mdxUtils'
-
+import fs from "fs";
+import matter from "gray-matter";
+import { MDXRemote } from "next-mdx-remote";
+import { serialize } from "next-mdx-remote/serialize";
+import dynamic from "next/dynamic";
+import Head from "next/head";
+import Link from "next/link";
+import path from "path";
+import CustomLink from "../../components/CustomLink";
+import Layout from "../../components/Layout";
+import { postFilePaths, POSTS_PATH } from "../../utils/mdxUtils";
+import Editor from "react-simple-code-editor";
+import { highlight, languages } from "prismjs/components/prism-core";
+import "prismjs/components/prism-clike";
+import "prismjs/components/prism-sql";
+import "prismjs/themes/prism-funky.css";
+import Table from "../../components/Table";
+import { useEffect, useState } from "react";
+import styles from "../../css/App.module.css";
 // Custom components/renderers to pass to MDX.
 // Since the MDX files aren't loaded by webpack, they have no knowledge of how
 // to handle import statements. Instead, you must include components in scope
@@ -19,51 +26,79 @@ const components = {
   // It also works with dynamically-imported components, which is especially
   // useful for conditionally loading components for certain routes.
   // See the notes in README.md for more details.
-  TestComponent: dynamic(() => import('../../components/TestComponent')),
+  TestComponent: dynamic(() => import("../../components/TestComponent")),
   Head,
-}
+};
 
 export default function PostPage({ source, frontMatter }) {
+  const [codeString, setCodeString] = useState("");
+  const [tableData, setTableData] = useState(null);
+  useEffect(() => console.log("table data", tableData), [tableData]);
+  const executeSql = () => {
+    const db = openDatabase("mydb", "1.0", "My DB", 2 * 1024 * 1024);
+    db.transaction(function (tx) {
+      codeString.split("\n").forEach((line) => {
+        tx.executeSql(
+          line,
+          [],
+          (success, data) => {
+            console.log("asdqw", success, data.rows, data.rows.length, data);
+            setTableData({ ...data.rows });
+          },
+          (success, error) => console.log("error", success, error)
+        );
+      });
+    });
+    setCodeString("");
+  };
   return (
-    <Layout>
-      <header>
-        <nav>
-          <Link href="/">
-            <a>👈 Go back home</a>
-          </Link>
-        </nav>
-      </header>
-      <div className="post-header">
-        <h1>{frontMatter.title}</h1>
-        {frontMatter.description && (
-          <p className="description">{frontMatter.description}</p>
-        )}
+    <div>
+      <Head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700&display=swap"
+          rel="stylesheet"
+        />
+      </Head>
+      <div className={styles.App}>
+        <div className={`${styles.child} ${styles.blog}`}>
+          <MDXRemote {...source} components={components} />
+        </div>
+        <div className={`${styles.child} ${styles.vertical}`}>
+          <div className={`${styles.child} ${styles.vertical}`}>
+            <Editor
+              value={codeString}
+              onValueChange={(code) => setCodeString(code)}
+              highlight={(code) => highlight(code, languages.sql)}
+              padding={10}
+              style={{
+                fontSize: 16,
+                backgroundColor: "#0e141b",
+                flex: 1,
+                caretColor: "white",
+                color: "white",
+                margin: "10px",
+                borderRadius: "12px",
+                marginLeft: "0px",
+              }}
+            />
+            <button onClick={executeSql}>executeSql</button>
+          </div>
+          <div className={styles.child}>
+            <Table data={tableData} />
+          </div>
+        </div>
       </div>
-      <main>
-        <MDXRemote {...source} components={components} />
-      </main>
-
-      <style jsx>{`
-        .post-header h1 {
-          margin-bottom: 0;
-        }
-
-        .post-header {
-          margin-bottom: 2rem;
-        }
-        .description {
-          opacity: 0.6;
-        }
-      `}</style>
-    </Layout>
-  )
+    </div>
+  );
 }
 
 export const getStaticProps = async ({ params }) => {
-  const postFilePath = path.join(POSTS_PATH, `${params.slug}.mdx`)
-  const source = fs.readFileSync(postFilePath)
+  const postFilePath = path.join(POSTS_PATH, `${params.slug}.mdx`);
+  const source = fs.readFileSync(postFilePath);
 
-  const { content, data } = matter(source)
+  const { content, data } = matter(source);
 
   const mdxSource = await serialize(content, {
     // Optionally pass remark/rehype plugins
@@ -72,25 +107,25 @@ export const getStaticProps = async ({ params }) => {
       rehypePlugins: [],
     },
     scope: data,
-  })
+  });
 
   return {
     props: {
       source: mdxSource,
       frontMatter: data,
     },
-  }
-}
+  };
+};
 
 export const getStaticPaths = async () => {
   const paths = postFilePaths
     // Remove file extensions for page paths
-    .map((path) => path.replace(/\.mdx?$/, ''))
+    .map((path) => path.replace(/\.mdx?$/, ""))
     // Map the path into the static paths object required by Next.js
-    .map((slug) => ({ params: { slug } }))
+    .map((slug) => ({ params: { slug } }));
 
   return {
     paths,
     fallback: false,
-  }
-}
+  };
+};
