@@ -1,0 +1,18 @@
+---
+title: SQL Data Types
+---
+
+# SQL Data Types
+
+All the popular database server have the capacity to store different types of data such as strings, numbers, and dates. Some have the ability to store special data types such as XML and JSON documents or spatial data.
+
+## Character Data
+
+Character data can be stored either in fixed-length or in variable-length. The primary difference between them is that fixed-length have strings which are right padded with spaces to make all the strings of same bytes while variable-length can be of any number of bytes. While defining a Character column you must specify the maximum size of any string that stored in that column.
+
+```sql
+CHAR(20)
+VARCHAR(20)
+```
+
+The first statement create a fixed-length character of 20 characters and second one is to create a variable-length character of at max 20 characters. The maximum of `char` is 255 bytes and of `varchar` is
